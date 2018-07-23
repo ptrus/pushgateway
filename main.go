@@ -34,7 +34,7 @@ import (
 	"github.com/prometheus/common/promlog"
 	"github.com/prometheus/common/route"
 	"github.com/prometheus/common/version"
-	"gopkg.in/alecthomas/kingpin.v2"
+	kingpin "gopkg.in/alecthomas/kingpin.v2"
 
 	dto "github.com/prometheus/client_model/go"
 	promlogflag "github.com/prometheus/common/promlog/flag"
@@ -69,6 +69,7 @@ func main() {
 		persistenceFile     = app.Flag("persistence.file", "File to persist metrics. If empty, metrics are only kept in memory.").Default("").String()
 		persistenceInterval = app.Flag("persistence.interval", "The minimum interval at which to write out the persistence file.").Default("5m").Duration()
 		pushUnchecked       = app.Flag("push.disable-consistency-check", "Do not check consistency of pushed metrics. DANGEROUS.").Default("false").Bool()
+		staleMetricTTL      = app.Flag("staleMetricTtl", "The TTL for metrics before they get deleted.").Default("1m").Duration()
 		promlogConfig       = promlog.Config{}
 	)
 	promlogflag.AddFlags(app, &promlogConfig)
@@ -95,8 +96,7 @@ func main() {
 			flags[f.Name] = f.Value.String()
 		}
 	}
-
-	ms := storage.NewDiskMetricStore(*persistenceFile, *persistenceInterval, prometheus.DefaultGatherer, logger)
+	ms := storage.NewDiskMetricStore(*persistenceFile, *persistenceInterval, prometheus.DefaultGatherer, logger, *staleMetricTTL)
 
 	// Create a Gatherer combining the DefaultGatherer and the metrics from the metric store.
 	g := prometheus.Gatherers{

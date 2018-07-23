@@ -80,7 +80,7 @@ func convertMap(m map[string]string) map[string]interface{} {
 }
 
 func TestStatusAPI(t *testing.T) {
-	dms := storage.NewDiskMetricStore("", 100*time.Millisecond, nil, logger)
+	dms := storage.NewDiskMetricStore("", 100*time.Millisecond, nil, logger, time.Second*30)
 	testAPI := New(logger, dms, testFlags, testBuildInfo)
 
 	req, err := http.NewRequest("GET", "http://example.org/", &bytes.Buffer{})
@@ -111,7 +111,7 @@ func TestStatusAPI(t *testing.T) {
 }
 
 func TestMetricsAPI(t *testing.T) {
-	dms := storage.NewDiskMetricStore("", 100*time.Millisecond, nil, logger)
+	dms := storage.NewDiskMetricStore("", 100*time.Millisecond, nil, logger, time.Second*30)
 	testAPI := New(logger, dms, testFlags, testBuildInfo)
 
 	req, err := http.NewRequest("GET", "http://example.org/", &bytes.Buffer{})

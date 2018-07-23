@@ -80,6 +80,7 @@ func NewDiskMetricStore(
 	persistenceInterval time.Duration,
 	gatherPredefinedHelpFrom prometheus.Gatherer,
 	logger log.Logger,
+	staleMetricTTL time.Duration,
 ) *DiskMetricStore {
 	// TODO: Do that outside of the constructor to allow the HTTP server to
 	//  serve /-/healthy and /-/ready earlier.
@@ -101,6 +102,7 @@ func NewDiskMetricStore(
 	}
 
 	go dms.loop(persistenceInterval)
+	go dms.clearStaleLoop(staleMetricTTL)
 	return dms
 }
 
@@ -258,6 +260,28 @@ func (dms *DiskMetricStore) loop(persistenceInterval time.Duration) {
 				}
 			}
 		}
+	}
+}
+
+func (dms *DiskMetricStore) clearStale(staleMetricTTL time.Duration) {
+	dms.lock.RLock()
+	defer dms.lock.RUnlock()
+
+	cleanupTime := time.Now().Truncate(staleMetricTTL)
+	for _, group := range dms.metricGroups {
+		for name, tmf := range group.Metrics {
+			if tmf.Timestamp.Before(cleanupTime) {
+				delete(group.Metrics, name)
+			}
+		}
+	}
+}
+
+func (dms *DiskMetricStore) clearStaleLoop(staleMetricTTL time.Duration) {
+	staleMetricInterval, _ := time.ParseDuration("30s")
+	for {
+		<-time.After(staleMetricInterval)
+		go dms.clearStale(staleMetricTTL)
 	}
 }
 
